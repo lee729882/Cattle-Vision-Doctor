@@ -1,23 +1,47 @@
-# Virtual environments
+# YOLO Dataset (Ignore heavy files, but keep metadata yaml/txt if you want)
+data/images/
+data/labels/
+
+# YOLO Logging & Runs
+runs/*
+!runs/.gitkeep
+
+# Model weights
+*.pt
+*.onnx
+*.engine
+
+# Python caches and artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
 cattle-env/
 venv/
 env/
 .env
 
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# IDE / Editor
+# Editor / OS
 .vscode/
 .idea/
-*.swp
-*.swo
-
-# MacOS
 .DS_Store
-
-# PyTorch / YOLO
-*.pt
-runs/
+Thumbs.db
