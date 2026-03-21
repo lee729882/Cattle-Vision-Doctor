@@ -81,6 +81,6 @@ names:
   79: '80'
   80: contamination
 path: .
-train: data/train_split.txt
+train: data/final_train/images
 val: data/val_split.txt
 nc: 81

@@ -1,15 +1,23 @@
-# YOLO Dataset (Ignore heavy files, but keep metadata yaml/txt if you want)
+# YOLO Dataset (Ignore heavy files)
 data/images/
 data/labels/
+data/final_train/
+data/augmented/
 
 # YOLO Logging & Runs
 runs/*
-!runs/.gitkeep
+!runs/detect/
+!runs/detect/Vision_Doctor_Final3/
 
 # Model weights
 *.pt
 *.onnx
 *.engine
+!models/best_cow_contamination.pt
+
+# Output keep
+!output/
+!data/samples/
 
 # Python caches and artifacts
 __pycache__/
@@ -33,6 +41,8 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.cache
+*.cache
 
 # Virtual Environment
 cattle-env/
