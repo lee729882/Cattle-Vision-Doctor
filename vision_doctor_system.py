@@ -8,8 +8,8 @@ from PIL import Image, ImageTk
 from ultralytics import YOLO
 
 # --- 설정 (경로 확인 필수!) ---
-MODEL_PATH = r'01_Final_Demo/best.pt'
-DATA_VAULT = r'02_Dataset_Vault'
+MODEL_PATH = r'01_Model/best.pt'
+DATA_VAULT = r'02_Cattle_Dataset'
 DIRTY_CLASS_ID = 80 # 팀장님 확인 사항: 오염 클래스 인덱스
 
 ctk.set_appearance_mode("Dark")
