@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['knife']
+
+roboflow:
+  workspace: s-workspace-d39qq
+  project: knife-cqnb0
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/s-workspace-d39qq/knife-cqnb0/dataset/1

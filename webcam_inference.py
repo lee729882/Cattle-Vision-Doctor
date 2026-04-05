@@ -89,18 +89,17 @@ class WebcamApp(ctk.CTk):
 
     def _load_model(self):
         self.log_message("[System] AI 모델(YOLO)을 불러오고 있습니다...")
-        weights_path = "runs/detect/baseline_test/weights/best.pt"
-        if not os.path.exists(weights_path):
-            weights_path = "runs/detect/runs/detect/baseline_test/weights/best.pt"
+        weights_path = "weapon_model.pt"
             
         try:
             self.model = YOLO(weights_path)
-            self.log_message(f"[System] AI 모델 로드 완료: {os.path.basename(weights_path)}")
+            self.log_message(f"[System] AI 커스텀 학습 모델({os.path.basename(weights_path)}) 로드 완료!")
         except Exception:
             # 커스텀 모델이 없거나 손상되었을 경우 기본 모델 임시 지원
-            self.model = YOLO("yolov8n.pt")
-            self.log_message(f"[System] 👉 원본 모델 오류로 기본 모델(yolov8n.pt)을 로드했습니다.")
-            self.log_message("[System] 모니터링을 시작할 준비가 되었습니다.")
+            self.model = YOLO("yolov8s.pt")
+            self.log_message(f"[System] 👉 커스텀 모델({weights_path})을 찾을 수 없어 기본 모델(yolov8s.pt)을 로드했습니다.")
+            
+        self.log_message("[System] 모니터링을 시작할 준비가 되었습니다.")
 
     def log_message(self, msg):
         """ 스레드 안전하게 로그 텍스트를 화면에 삽입합니다 """
@@ -175,6 +174,7 @@ class WebcamApp(ctk.CTk):
         turn_alert_counter = 0   
         last_move_dir = "UNKNOWN"
         alert_state_logged = False # 로그 중복 도배 방지용
+        weapon_alert_logged = False # 무기 감지 로그 도배 방지용
         covered_cooldown = 0     # 큰 물체가 치워질 때의 움직임을 이동으로 오인하는 현상 방지용
 
         while self.running and self.cap.isOpened():
@@ -265,33 +265,71 @@ class WebcamApp(ctk.CTk):
                 overlay = annotated_frame.copy()
                 overlay[:] = (0, 0, 255)
                 cv2.addWeighted(overlay, 0.3, annotated_frame, 0.7, 0, annotated_frame)
-            
-            elif is_turned:
-                if not alert_state_logged:
-                    self.log_message(f"⚠️ [주의] 카메라 자체 물리적 이동 감지: [{last_move_dir}]")
-                    alert_state_logged = True
-                    # 메인 프레임 테두리를 노란색으로 점등
-                    self.after(0, lambda: self.video_frame.configure(border_color="#FFFF00"))
-
-                results = self.model(frame, conf=0.5, verbose=False)
-                annotated_frame = results[0].plot()
-                
-                alert_msg = f"WARNING! CAMERA MOVED: [{last_move_dir}]"
-                cv2.putText(annotated_frame, alert_msg, (20, 60), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 255), 3, cv2.LINE_AA)
-                overlay = annotated_frame.copy()
-                overlay[:] = (0, 255, 255)
-                cv2.addWeighted(overlay, 0.3, annotated_frame, 0.7, 0, annotated_frame)
+                weapon_alert_logged = False
             
             else:
-                if alert_state_logged:
-                    self.log_message("✅ [정상] 시야가 회복되어 정상 모니터링을 재개합니다.")
-                    alert_state_logged = False
-                    # 메인 프레임 테두리를 초록색으로 복구
-                    self.after(0, lambda: self.video_frame.configure(border_color="#00FF00"))
-
-                results = self.model(frame, conf=0.5, verbose=False)
+                # 1. 모델에서 'knife', 'scissors' 에 해당하는 클래스 ID 추출
+                target_classes = [k for k, v in self.model.names.items() if "knife" in v.lower() or "scissors" in v.lower()]
+                
+                # 2. 지정된 타겟 클래스(칼, 가위)만 감지하도록 제한하여 불필요한 사물은 박스를 그리지 않음
+                if target_classes:
+                    results = self.model(frame, conf=0.25, classes=target_classes, verbose=False)
+                else:
+                    results = self.model(frame, conf=0.25, verbose=False)
+                    
                 annotated_frame = results[0].plot()
+
+                # 경고 감지 로직
+                weapon_detected = False
+                detected_weapons = []
+                if results[0].boxes is not None:
+                    for box in results[0].boxes:
+                        cls_id = int(box.cls[0].item())
+                        cls_name = self.model.names[cls_id].lower()
+                        if "knife" in cls_name or "scissors" in cls_name:
+                            weapon_detected = True
+                            # 알림을 위해 한글로 이름 변환
+                            kor_name = "칼" if "knife" in cls_name else "가위"
+                            detected_weapons.append(kor_name)
+
+                if weapon_detected:
+                    if not weapon_alert_logged:
+                        weapons_str = ", ".join(set(detected_weapons))
+                        self.log_message(f"🚨 [범죄 위험 감지] 흉기({weapons_str})가 식별되었습니다!")
+                        weapon_alert_logged = True
+                        self.after(0, lambda: self.video_frame.configure(border_color="#FF0000"))
+                    
+                    cv2.putText(annotated_frame, "CRIME RISK DETECTED!", (20, 60), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 3, cv2.LINE_AA)
+                    overlay = annotated_frame.copy()
+                    overlay[:] = (0, 0, 255)
+                    cv2.addWeighted(overlay, 0.3, annotated_frame, 0.7, 0, annotated_frame)
+                    
+                    if alert_state_logged:
+                        alert_state_logged = False
+                        
+                elif is_turned:
+                    if not alert_state_logged:
+                        self.log_message(f"⚠️ [주의] 카메라 자체 물리적 이동 감지: [{last_move_dir}]")
+                        alert_state_logged = True
+                        # 메인 프레임 테두리를 노란색으로 점등
+                        self.after(0, lambda: self.video_frame.configure(border_color="#FFFF00"))
+
+                    alert_msg = f"WARNING! CAMERA MOVED: [{last_move_dir}]"
+                    cv2.putText(annotated_frame, alert_msg, (20, 60), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 255), 3, cv2.LINE_AA)
+                    overlay = annotated_frame.copy()
+                    overlay[:] = (0, 255, 255)
+                    cv2.addWeighted(overlay, 0.3, annotated_frame, 0.7, 0, annotated_frame)
+                    weapon_alert_logged = False
+                
+                else:
+                    if alert_state_logged or weapon_alert_logged:
+                        self.log_message("✅ [정상] 시야가 회복되었거나 위험 요소가 사라졌습니다.")
+                        alert_state_logged = False
+                        weapon_alert_logged = False
+                        # 메인 프레임 테두리를 초록색으로 복구
+                        self.after(0, lambda: self.video_frame.configure(border_color="#00FF00"))
 
             # 4. CustomTkinter UI 뷰포트로 이미지 밀어넣기 처리
             color_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
