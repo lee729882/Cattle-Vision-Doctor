@@ -1,14 +1,23 @@
 # [Vision Doctor] Core AI & Computer Vision
 ultralytics
 opencv-python
+numpy
+torch
+torchvision
+torchaudio
 
 # [Vision Doctor] UI & Visualization
 customtkinter
 pillow
 matplotlib
 
+# [Vision Doctor] Network & API
+requests
+
+# [Vision Doctor] Hardware (Raspberry Pi / Optional)
+# adafruit-extended-bus
+# adafruit-circuitpython-pca9685
+# adafruit-circuitpython-motor
+
 # [Vision Doctor] Support Utilities
 pyyaml
-torch
-torchvision
-torchaudio
